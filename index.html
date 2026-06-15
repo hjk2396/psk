@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>건강 일지</title>
+  <style>
+    :root {
+      --primary: #5cb88a;
+      --primary-light: #eaf7f0;
+      --primary-dark: #3a9068;
+      --accent: #ff8c69;
+      --accent-light: #fff4f0;
+      --danger: #e74c3c;
+      --warning: #f39c12;
+      --info: #3498db;
+      --text: #2c3e50;
+      --text-sub: #8a9bb0;
+      --bg: #f0f4f8;
+      --card: #ffffff;
+      --border: #e4ecf2;
+      --shadow: 0 2px 16px rgba(0,0,0,0.07);
+      --radius: 16px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* ── Header ── */
+    .header { background: white; padding: 14px 20px 10px; text-align: center; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 8px rgba(0,0,0,0.06); }
+    .header h1 { font-size: 17px; font-weight: 800; color: var(--text); letter-spacing: -0.3px; }
+    .header .sub { font-size: 11px; color: var(--primary); margin-top: 2px; }
+    .dot { display: inline-block; width: 6px; height: 6px; background: var(--primary); border-radius: 50%; margin-right: 4px; animation: blink 2s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    /* ── Tabs ── */
+    .tabs { display: flex; background: white; border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab { flex: 0 0 auto; padding: 11px 16px; font-size: 13px; color: var(--text-sub); cursor: pointer; border-bottom: 2.5px solid transparent; white-space: nowrap; transition: all .2s; user-select: none; }
+    .tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 700; }
+
+    /* ── Calendar ── */
+    .cal-wrap { background: white; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+    .cal-nav { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 10px; }
+    .cal-nav button { background: none; border: 1px solid var(--border); border-radius: 50%; width: 26px; height: 26px; cursor: pointer; font-size: 11px; color: var(--text-sub); display: flex; align-items: center; justify-content: center; }
+    .cal-title { font-size: 14px; font-weight: 700; color: var(--primary); min-width: 160px; text-align: center; }
+    .days-row { display: flex; gap: 4px; }
+    .day-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 2px; border: none; background: none; cursor: pointer; border-radius: 10px; transition: background .2s; }
+    .day-btn .dlabel { font-size: 10px; color: var(--text-sub); }
+    .day-btn .dnum { font-size: 15px; font-weight: 600; color: var(--text); width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: all .2s; }
+    .day-btn.today .dnum { background: var(--primary); color: white; }
+    .day-btn.selected:not(.today) .dnum { background: var(--primary-light); color: var(--primary-dark); }
+    .day-btn .dot-row { height: 5px; display: flex; gap: 2px; }
+    .day-btn .dot-ind { width: 4px; height: 4px; border-radius: 50%; }
+
+    /* ── Content ── */
+    .content { padding: 12px 14px 80px; max-width: 640px; margin: 0 auto; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Card ── */
+    .card { background: var(--card); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; box-shadow: var(--shadow); }
+    .card-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .card-title { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+    .card-title .ico { font-size: 17px; }
+
+    /* ── Section label ── */
+    .slabel { font-size: 10px; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: .6px; margin: 12px 0 6px; }
+
+    /* ── Meal items ── */
+    .meal-row { display: flex; align-items: center; padding: 11px 0; border-bottom: 1px solid var(--border); gap: 10px; }
+    .meal-row:last-child { border-bottom: none; }
+    .meal-badge { background: var(--primary-light); color: var(--primary-dark); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; min-width: 38px; text-align: center; flex-shrink: 0; }
+    .meal-info { flex: 1; min-width: 0; }
+    .meal-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .meal-meta { font-size: 11px; color: var(--text-sub); margin-top: 2px; }
+    .chk-btn { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--border); background: white; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; transition: all .2s; flex-shrink: 0; }
+    .chk-btn.on { background: var(--primary); border-color: var(--primary); color: white; }
+    .small-btn { background: var(--primary); color: white; border: none; border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 700; cursor: pointer; flex-shrink: 0; }
+    .small-btn.ghost { background: var(--primary-light); color: var(--primary-dark); }
+
+    /* ── Snack tags ── */
+    .snack-tag { display: inline-flex; align-items: center; gap: 4px; background: var(--accent-light); color: #d4611a; border-radius: 20px; padding: 4px 10px; font-size: 12px; margin: 3px; }
+    .snack-del { cursor: pointer; font-weight: 700; }
+
+    /* ── Water ── */
+    .glass-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .glass { width: 38px; height: 38px; border-radius: 10px; border: 2px solid var(--border); background: white; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center; transition: all .2s; }
+    .glass.on { background: #e3f2fd; border-color: #64b5f6; }
+
+    /* ── Med items ── */
+    .med-row { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); gap: 10px; }
+    .med-row:last-child { border-bottom: none; }
+    .med-chk { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--border); background: white; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; transition: all .2s; flex-shrink: 0; }
+    .med-chk.on { background: var(--primary); border-color: var(--primary); color: white; }
+    .med-info { flex: 1; }
+    .med-name { font-size: 14px; font-weight: 700; }
+    .med-name.taken { text-decoration: line-through; color: var(--text-sub); }
+    .med-detail { font-size: 11px; color: var(--text-sub); margin-top: 2px; }
+    .med-timing { font-size: 11px; color: var(--primary); font-weight: 700; background: var(--primary-light); padding: 2px 8px; border-radius: 10px; flex-shrink: 0; }
+    .med-del { background: none; border: none; color: var(--text-sub); cursor: pointer; font-size: 18px; padding: 4px; flex-shrink: 0; }
+
+    /* ── Progress ── */
+    .prog-bar { height: 7px; background: var(--border); border-radius: 4px; overflow: hidden; margin-top: 6px; }
+    .prog-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--primary-dark)); border-radius: 4px; transition: width .4s; }
+
+    /* ── Temperature ── */
+    .temp-big { display: flex; align-items: baseline; gap: 4px; margin-bottom: 12px; }
+    .temp-num { font-size: 40px; font-weight: 800; color: var(--text); }
+    .temp-unit { font-size: 16px; color: var(--text-sub); }
+    .temp-badge { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 20px; margin-left: 8px; }
+    .tbadge-normal { background: #e8f5e9; color: #2e7d32; }
+    .tbadge-fever  { background: #ffebee; color: #c62828; }
+    .tbadge-low    { background: #e3f2fd; color: #1565c0; }
+    .temp-hist { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+    .temp-hist-item { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-sub); padding: 4px 8px; background: var(--bg); border-radius: 6px; }
+
+    /* ── Input styles ── */
+    .inp { width: 100%; border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 14px; color: var(--text); outline: none; font-family: inherit; transition: border .2s; background: white; }
+    .inp:focus { border-color: var(--primary); }
+    .inp-row { display: flex; align-items: center; gap: 8px; }
+    .inp-row .inp { flex: 1; }
+    textarea.inp { resize: none; min-height: 80px; }
+    select.inp { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238a9bb0' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+
+    /* ── Pain scale ── */
+    .pain-scale { display: flex; gap: 3px; margin-top: 8px; }
+    .p-btn { flex: 1; padding: 7px 2px; border: 1.5px solid var(--border); border-radius: 8px; background: white; font-size: 11px; font-weight: 700; cursor: pointer; text-align: center; transition: all .2s; }
+
+    /* ── Chips ── */
+    .chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .chip { padding: 6px 12px; border: 1.5px solid var(--border); border-radius: 20px; font-size: 12px; cursor: pointer; background: white; transition: all .2s; user-select: none; }
+    .chip.on { background: var(--primary); border-color: var(--primary); color: white; font-weight: 600; }
+
+    /* ── Condition ── */
+    .cond-row { display: flex; justify-content: space-around; gap: 6px; margin-top: 8px; }
+    .cond-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px; border: 2px solid var(--border); border-radius: 12px; background: white; cursor: pointer; transition: all .2s; font-size: 11px; color: var(--text-sub); }
+    .cond-btn .em { font-size: 22px; }
+    .cond-btn.on { border-color: var(--primary); background: var(--primary-light); color: var(--primary-dark); font-weight: 700; }
+
+    /* ── Dashed add button ── */
+    .add-btn { width: 100%; padding: 12px; background: var(--primary-light); border: 2px dashed var(--primary); border-radius: 12px; color: var(--primary); font-size: 14px; font-weight: 700; cursor: pointer; margin-top: 10px; transition: all .2s; }
+    .add-btn:hover { background: var(--primary); color: white; }
+
+    /* ── Summary cards ── */
+    .sum-card { background: white; border-radius: 14px; padding: 14px 16px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow); }
+    .sum-left { display: flex; align-items: center; gap: 12px; }
+    .sum-ico { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+    .sum-label { font-size: 14px; font-weight: 700; }
+    .sum-sub { font-size: 11px; color: var(--text-sub); margin-top: 2px; }
+    .badge { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; flex-shrink: 0; }
+    .bg-green  { background: #e8f5e9; color: #2e7d32; }
+    .bg-orange { background: #fff3e0; color: #e65100; }
+    .bg-red    { background: #ffebee; color: #c62828; }
+    .bg-gray   { background: var(--bg); color: var(--text-sub); }
+
+    /* ── Modal ── */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200; display: flex; align-items: flex-end; justify-content: center; padding-bottom: env(safe-area-inset-bottom); }
+    .overlay.hidden { display: none; }
+    .modal { background: white; border-radius: 22px 22px 0 0; padding: 24px 20px 32px; width: 100%; max-width: 640px; animation: slide-up .25s ease; }
+    @keyframes slide-up { from{transform:translateY(100%)} to{transform:translateY(0)} }
+    .modal-title { font-size: 18px; font-weight: 800; margin-bottom: 20px; }
+    .fgroup { margin-bottom: 14px; }
+    .flabel { font-size: 11px; font-weight: 700; color: var(--text-sub); display: block; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+    .frow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .mactions { display: flex; gap: 10px; margin-top: 20px; }
+    .btn-cancel { flex: 1; padding: 14px; border: 1.5px solid var(--border); border-radius: 12px; background: white; font-size: 15px; cursor: pointer; font-weight: 700; color: var(--text-sub); }
+    .btn-ok { flex: 2; padding: 14px; border: none; border-radius: 12px; background: var(--primary); color: white; font-size: 15px; cursor: pointer; font-weight: 800; }
+    .btn-danger-ok { background: var(--danger); }
+
+    /* ── Toast ── */
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: rgba(44,62,80,.92); color: white; padding: 11px 22px; border-radius: 30px; font-size: 13px; font-weight: 600; z-index: 300; transition: transform .3s; white-space: nowrap; pointer-events: none; }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ── Vital trend ── */
+    .trend-row { display: flex; gap: 6px; margin-top: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+    .trend-row::-webkit-scrollbar { display: none; }
+    .trend-item { flex-shrink: 0; text-align: center; padding: 6px 10px; background: var(--bg); border-radius: 10px; }
+    .trend-val { font-size: 14px; font-weight: 700; }
+    .trend-time { font-size: 10px; color: var(--text-sub); margin-top: 2px; }
+
+    /* ── Responsive ── */
+    @media (min-width: 520px) {
+      .content { padding: 16px 20px 80px; }
+      .cond-btn .em { font-size: 26px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🏥 건강 일지</h1>
+  <div class="sub"><span class="dot"></span>매일 기록하고 건강을 관리해요</div>
+</div>
+
+<div class="tabs" id="tabs">
+  <div class="tab active"  onclick="switchTab(this,'meal')">🍽️ 식사 기록</div>
+  <div class="tab"         onclick="switchTab(this,'meds')">💊 약 복용</div>
+  <div class="tab"         onclick="switchTab(this,'health')">🌡️ 건강 체크</div>
+  <div class="tab"         onclick="switchTab(this,'summary')">📋 오늘 요약</div>
+</div>
+
+<!-- Calendar -->
+<div class="cal-wrap">
+  <div class="cal-nav">
+    <button onclick="shiftWeek(-1)">◀</button>
+    <span class="cal-title" id="calTitle"></span>
+    <button onclick="shiftWeek(1)">▶</button>
+  </div>
+  <div class="days-row" id="daysRow"></div>
+</div>
+
+<!-- ────────────── PANELS ────────────── -->
+<div class="content">
+
+  <!-- MEAL PANEL -->
+  <div class="tab-panel active" id="panel-meal">
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-title"><span class="ico">🍚</span>식사 기록</div>
+      </div>
+      <div id="mealRows"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-title"><span class="ico">🍎</span>간식</div>
+        <button class="small-btn ghost" onclick="openModal('snackModal')">+ 추가</button>
+      </div>
+      <div id="snackList"><span style="font-size:13px;color:var(--text-sub)">기록된 간식이 없어요</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-title"><span class="ico">💧</span>수분 섭취</div>
+        <span style="font-size:13px;color:var(--text-sub)" id="waterLabel">0 / 8 잔</span>
+      </div>
+      <div class="glass-row" id="glassRow"></div>
+      <div style="font-size:11px;color:var(--text-sub);margin-top:8px">권장: 하루 8잔 (약 2L)</div>
+    </div>
+  </div>
+
+  <!-- MEDS PANEL -->
+  <div class="tab-panel" id="panel-meds">
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-title"><span class="ico">💊</span>오늘의 약 복용</div>
+      </div>
+      <div id="medList"></div>
+      <button class="add-btn" onclick="openModal('medModal')">+ 약 추가</button>
+    </div>
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-title"><span class="ico">📊</span>복용 현황</div>
+        <span style="font-size:13px;font-weight:700;color:var(--primary)" id="medPct">-</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+        <span>복용 완료</span><span id="medProgTxt">0 / 0</span>
+      </div>
+      <div class="prog-bar"><div class="prog-fill" id="medProgBar" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <!-- HEALTH PANEL -->
+  <div class="tab-panel" id="panel-health">
+
+    <!-- Temperature -->
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-title"><span class="ico">🌡️</span>체온</div>
+      </div>
+      <div class="temp-big">
+        <span class="temp-num" id="tempNum">--.-</span>
+        <span class="temp-unit">°C</span>
+        <span class="temp-badge" id="tempBadge" style="display:none"></span>
+      </div>
+      <div style="font-size:11px;color:var(--text-sub);margin-bottom:12px" id="tempLastTime">마지막 측정: 없음</div>
+      <div class="inp-row">
+        <input type="number" step="0.1" min="34" max="42" class="inp" id="tempInp" placeholder="예: 36.5 (°C)">
+        <button class="small-btn" onclick="saveTemp()">저장</button>
+      </div>
+      <div class="trend-row" id="tempTrend"></div>
+    </div>
+
+    <!-- Blood Pressure -->
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-title"><span class="ico">❤️</span>혈압</div>
+      </div>
+      <div style="font-size:24px;font-weight:800;margin-bottom:12px" id="bpDisplay">-- / -- <span style="font-size:13px;color:var(--text-sub)">mmHg</span></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="number" class="inp" id="bpSys" placeholder="수축기 (위)">
+        <span style="font-size:18px;color:var(--text-sub);">/</span>
+        <input type="number" class="inp" id="bpDia" placeholder="이완기 (아래)">
+        <button class="small-btn" onclick="saveBP()">저장</button>
+      </div>
+      <div style="font-size:11px;color:var(--text-sub);margin-top:8px" id="bpTime">마지막 측정: 없음</div>
+    </div>
+
+    <!-- Weight -->
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-title"><span class="ico">⚖️</span>체중</div>
+      </div>
+      <div style="font-size:24px;font-weight:800;margin-bottom:12px"><span id="weightNum">--</span> <span style="font-size:13px;color:var(--text-sub)">kg</span></div>
+      <div class="inp-row">
+        <input type="number" step="0.1" class="inp" id="weightInp" placeholder="예: 60.5 (kg)">
+        <button class="small-btn" onclick="saveWeight()">저장</button>
+      </div>
+      <div style="font-size:11px;color:var(--text-sub);margin-top:8px" id="weightTime">마지막 측정: 없음</div>
+    </div>
+
+    <!-- Pain -->
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-title"><span class="ico">🩹</span>통증</div>
+      </div>
+      <div style="font-size:12px;color:var(--text-sub);margin-bottom:4px">통증 강도 선택 (0: 없음 ~ 10: 매우 심함)</div>
+      <div class="pain-scale" id="painScale"></div>
+      <div class="slabel">통증 부위</div>
+      <div class="chip-row" id="painLocs">
+        <div class="chip" onclick="toggleChip(this)">없음</div>
+        <div class="chip" onclick="toggleChip(this)">머리</div>
+        <div class="chip" onclick="toggleChip(this)">목</div>
+        <div class="chip" onclick="toggleChip(this)">가슴</div>
+        <div class="chip" onclick="toggleChip(this)">배</div>
+        <div class="chip" onclick="toggleChip(this)">등</div>
+        <div class="chip" onclick="toggleChip(this)">허리</div>
+        <div class="chip" onclick="toggleChip(this)">팔/다리</div>
+        <div class="chip" onclick="toggleChip(this)">기타</div>
+      </div>
+      <div class="slabel" style="margin-top:14px">통증 성격</div>
+      <div class="chip-row" id="painType">
+        <div class="chip" onclick="toggleChip(this)">찌르는</div>
+        <div class="chip" onclick="toggleChip(this)">쑤시는</div>
+        <div class="chip" onclick="toggleChip(this)">타는듯한</div>
+        <div class="chip" onclick="toggleChip(this)">묵직한</div>
+        <div class="chip" onclick="toggleChip(this)">쥐어짜는</div>
+      </div>
+      <button class="small-btn" style="width:100%;margin-top:14px;padding:12px;font-size:14px" onclick="savePain()">통증 기록 저장</button>
+    </div>
+
+    <!-- Bowel -->
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-title"><span class="ico">🚽</span>배변</div>
+      </div>
+      <div class="slabel">오늘 배변 여부</div>
+      <div class="chip-row">
+        <div class="chip" id="bowelYes" onclick="selectBowel('yes')">✓ 했어요</div>
+        <div class="chip" id="bowelNo"  onclick="selectBowel('no')">✗ 못했어요</div>
+      </div>
+      <div id="bowelDetail" style="display:none;margin-top:12px">
+        <div class="slabel">횟수</div>
+        <input type="number" min="1" max="20" class="inp" id="bowelCnt" placeholder="횟수">
+        <div class="slabel" style="margin-top:10px">형태 (브리스톨 척도)</div>
+        <div class="chip-row">
+          <div class="chip" onclick="toggleChip(this)">딱딱함 (1~2형)</div>
+          <div class="chip" onclick="toggleChip(this)">정상 (3~4형)</div>
+          <div class="chip" onclick="toggleChip(this)">묽음 (5~6형)</div>
+          <div class="chip" onclick="toggleChip(this)">설사 (7형)</div>
+        </div>
+        <div class="slabel" style="margin-top:10px">색깔</div>
+        <div class="chip-row">
+          <div class="chip" onclick="toggleChip(this)">황갈색 (정상)</div>
+          <div class="chip" onclick="toggleChip(this)">검은색</div>
+          <div class="chip" onclick="toggleChip(this)">붉은색</div>
+          <div class="chip" onclick="toggleChip(this)">연한색</div>
+        </div>
+      </div>
+      <button class="small-btn" style="width:100%;margin-top:14px;padding:12px;font-size:14px" onclick="saveBowel()">배변 기록 저장</button>
+    </div>
+
+    <!-- Condition -->
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-title"><span class="ico">😊</span>오늘 컨디션</div>
+      </div>
+      <div class="cond-row" id="condRow">
+        <button class="cond-btn" onclick="selectCond(this,'very-good')"><span class="em">😄</span><span>매우 좋음</span></button>
+        <button class="cond-btn" onclick="selectCond(this,'good')"><span class="em">🙂</span><span>좋음</span></button>
+        <button class="cond-btn" onclick="selectCond(this,'normal')"><span class="em">😐</span><span>보통</span></button>
+        <button class="cond-btn" onclick="selectCond(this,'bad')"><span class="em">😔</span><span>나쁨</span></button>
+        <button class="cond-btn" onclick="selectCond(this,'very-bad')"><span class="em">😣</span><span>매우 나쁨</span></button>
+      </div>
+    </div>
+
+    <!-- Side effects -->
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-title"><span class="ico">⚠️</span>부작용 / 증상</div>
+      </div>
+      <div class="chip-row" id="sideEffects">
+        <div class="chip" onclick="toggleChip(this)">구역</div>
+        <div class="chip" onclick="toggleChip(this)">구토</div>
+        <div class="chip" onclick="toggleChip(this)">피로</div>
+        <div class="chip" onclick="toggleChip(this)">식욕부진</div>
+        <div class="chip" onclick="toggleChip(this)">탈모</div>
+        <div class="chip" onclick="toggleChip(this)">손발저림</div>
+        <div class="chip" onclick="toggleChip(this)">구강궤양</div>
+        <div class="chip" onclick="toggleChip(this)">부종</div>
+        <div class="chip" onclick="toggleChip(this)">호흡곤란</div>
+        <div class="chip" onclick="toggleChip(this)">어지러움</div>
+        <div class="chip" onclick="toggleChip(this)">불면</div>
+        <div class="chip" onclick="toggleChip(this)">설사</div>
+        <div class="chip" onclick="toggleChip(this)">변비</div>
+      </div>
+      <button class="small-btn" style="width:100%;margin-top:14px;padding:12px;font-size:14px" onclick="saveSideEffects()">저장</button>
+    </div>
+
+    <!-- Notes -->
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-title"><span class="ico">📝</span>특이사항 메모</div>
+      </div>
+      <textarea class="inp" id="notesInp" placeholder="오늘 특이한 증상, 담당 의사 메모, 방문 내용 등을 자유롭게 기록해주세요..."></textarea>
+      <button class="small-btn" style="width:100%;margin-top:10px;padding:12px;font-size:14px" onclick="saveNotes()">저장</button>
+    </div>
+  </div>
+
+  <!-- SUMMARY PANEL -->
+  <div class="tab-panel" id="panel-summary">
+    <div id="summaryContent"></div>
+  </div>
+
+</div><!-- /content -->
+
+<!-- ────────── MODALS ────────── -->
+
+<!-- Meal Modal -->
+<div class="overlay hidden" id="mealModal" onclick="bgClose(event,'mealModal')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title" id="mealModalTitle">식사 기록</div>
+    <input type="hidden" id="mealKey">
+    <div class="fgroup">
+      <label class="flabel">식사 내용</label>
+      <input type="text" class="inp" id="mealContent" placeholder="예: 흰죽, 미음, 밥 반 공기">
+    </div>
+    <div class="frow">
+      <div class="fgroup">
+        <label class="flabel">시간</label>
+        <input type="time" class="inp" id="mealTime">
+      </div>
+      <div class="fgroup">
+        <label class="flabel">섭취량</label>
+        <select class="inp" id="mealAmount">
+          <option>전부</option><option>3/4</option><option>절반</option><option>1/3</option><option>조금</option><option>거의 못먹음</option>
+        </select>
+      </div>
+    </div>
+    <div class="fgroup">
+      <label class="flabel">식욕 / 메모</label>
+      <textarea class="inp" id="mealNote" placeholder="구역감, 식욕 상태 등"></textarea>
+    </div>
+    <div class="mactions">
+      <button class="btn-cancel" onclick="closeModal('mealModal')">취소</button>
+      <button class="btn-ok" onclick="saveMeal()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- Snack Modal -->
+<div class="overlay hidden" id="snackModal" onclick="bgClose(event,'snackModal')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title">간식 추가</div>
+    <div class="fgroup">
+      <label class="flabel">간식 내용</label>
+      <input type="text" class="inp" id="snackContent" placeholder="예: 요거트, 사과, 크래커">
+    </div>
+    <div class="fgroup">
+      <label class="flabel">시간</label>
+      <input type="time" class="inp" id="snackTime">
+    </div>
+    <div class="mactions">
+      <button class="btn-cancel" onclick="closeModal('snackModal')">취소</button>
+      <button class="btn-ok" onclick="saveSnack()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- Med Modal -->
+<div class="overlay hidden" id="medModal" onclick="bgClose(event,'medModal')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title">약 추가</div>
+    <div class="fgroup">
+      <label class="flabel">약 이름 / 용량</label>
+      <input type="text" class="inp" id="medName" placeholder="예: 타이레놀 500mg">
+    </div>
+    <div class="frow">
+      <div class="fgroup">
+        <label class="flabel">복용 시간</label>
+        <select class="inp" id="medTiming">
+          <option>아침</option><option>점심</option><option>저녁</option><option>아침·저녁</option><option>아침·점심·저녁</option><option>취침전</option><option>필요시</option>
+        </select>
+      </div>
+      <div class="fgroup">
+        <label class="flabel">용량</label>
+        <input type="text" class="inp" id="medDose" placeholder="예: 1정, 5ml">
+      </div>
+    </div>
+    <div class="fgroup">
+      <label class="flabel">메모</label>
+      <input type="text" class="inp" id="medMemo" placeholder="예: 식후 30분, 물 한 컵과 함께">
+    </div>
+    <div class="mactions">
+      <button class="btn-cancel" onclick="closeModal('medModal')">취소</button>
+      <button class="btn-ok" onclick="saveMed()">저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Helpers ──────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+
+function fmtDate(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function fmtKor(d) { return `${d.getMonth()+1}월 ${d.getDate()}일`; }
+function nowTime() { return new Date().toTimeString().slice(0,5); }
+function nowClock() { return new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}); }
+
+function toast(msg) {
+  const el = $('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 2400);
+}
+
+function openModal(id) { $(id).classList.remove('hidden'); }
+function closeModal(id) { $(id).classList.add('hidden'); }
+function bgClose(e, id) { if (e.target === $(id)) closeModal(id); }
+
+function toggleChip(el) { el.classList.toggle('on'); }
+
+// ── State ─────────────────────────────────────────────────
+let db = {};
+let today = fmtDate(new Date());
+let selDate = today;
+
+const MEAL_KEYS = ['breakfast','lunch','dinner'];
+const MEAL_LABELS = { breakfast:'아침', lunch:'점심', dinner:'저녁' };
+
+function dayState(date) {
+  if (!db[date]) {
+    db[date] = {
+      meals:    { breakfast:null, lunch:null, dinner:null },
+      mealDone: { breakfast:false, lunch:false, dinner:false },
+      snacks:   [],
+      water:    0,
+      meds:     loadGlobalMeds(),
+      temp:     { cur:null, hist:[] },
+      bp:       null,
+      weight:   null,
+      pain:     { level:null, locs:[], type:[] },
+      bowel:    { done:null, count:'', form:[], color:[] },
+      condition: null,
+      sideEffects: [],
+      notes:    ''
+    };
+  }
+  return db[date];
+}
+
+function S() { return dayState(selDate); }
+
+function loadGlobalMeds() {
+  return JSON.parse(localStorage.getItem('globalMeds') || '[]').map(m => ({...m, taken:false}));
+}
+function saveGlobalMeds(meds) {
+  localStorage.setItem('globalMeds', JSON.stringify(meds));
+}
+function persist() { localStorage.setItem('hj_health_db', JSON.stringify(db)); }
+function load() {
+  const raw = localStorage.getItem('hj_health_db');
+  if (raw) db = JSON.parse(raw);
+}
+
+// ── Calendar ──────────────────────────────────────────────
+const DAY_KOR = ['일','월','화','수','목','금','토'];
+let weekStart = getMonday(new Date());
+
+function getMonday(d) {
+  const t = new Date(d);
+  const day = t.getDay(); // 0=sun
+  const diff = day === 0 ? -6 : 1 - day;
+  t.setDate(t.getDate() + diff);
+  t.setHours(0,0,0,0);
+  return t;
+}
+
+function shiftWeek(dir) {
+  weekStart = new Date(weekStart);
+  weekStart.setDate(weekStart.getDate() + dir * 7);
+  renderCal();
+}
+
+function renderCal() {
+  const end = new Date(weekStart);
+  end.setDate(end.getDate() + 6);
+  $('calTitle').textContent = `${fmtKor(weekStart)} ~ ${fmtKor(end)}`;
+
+  const row = $('daysRow');
+  row.innerHTML = '';
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(weekStart);
+    d.setDate(d.getDate() + i);
+    const ds = fmtDate(d);
+    const dayLabel = ['월','화','수','목','금','토','일'][i];
+    const btn = document.createElement('button');
+    btn.className = 'day-btn' + (ds === today ? ' today' : '') + (ds === selDate ? ' selected' : '');
+    // Indicator dots for recorded data
+    const s = db[ds];
+    let dots = '';
+    if (s) {
+      const hasMeal = Object.values(s.mealDone).some(Boolean);
+      const hasMed = s.meds && s.meds.some(m => m.taken);
+      const hasHealth = s.temp && s.temp.cur;
+      if (hasMeal) dots += `<span class="dot-ind" style="background:var(--primary)"></span>`;
+      if (hasMed)  dots += `<span class="dot-ind" style="background:var(--accent)"></span>`;
+      if (hasHealth) dots += `<span class="dot-ind" style="background:#64b5f6"></span>`;
+    }
+    btn.innerHTML = `<span class="dlabel">${dayLabel}</span><span class="dnum">${d.getDate()}</span><span class="dot-row">${dots}</span>`;
+    btn.onclick = () => { selDate = ds; renderCal(); renderAll(); };
+    row.appendChild(btn);
+  }
+}
+
+// ── Tabs ──────────────────────────────────────────────────
+function switchTab(el, tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  $('panel-' + tab).classList.add('active');
+  if (tab === 'summary') renderSummary();
+}
+
+// ── Meals ─────────────────────────────────────────────────
+function renderMeals() {
+  const s = S();
+  const html = MEAL_KEYS.map(key => {
+    const meal = s.meals[key];
+    const done = s.mealDone[key];
+    return `
+      <div class="meal-row">
+        <span class="meal-badge">${MEAL_LABELS[key]}</span>
+        <div class="meal-info">
+          <div class="meal-name">${meal ? meal.content : '미기록'}</div>
+          <div class="meal-meta">${meal ? (meal.time || '') + (meal.amount ? ' · ' + meal.amount : '') : '탭하여 기록해주세요'}</div>
+        </div>
+        <button class="chk-btn ${done ? 'on' : ''}" onclick="toggleMealDone('${key}')">✓</button>
+        <button class="small-btn ghost" onclick="openMealModal('${key}')">기록</button>
+      </div>`;
+  }).join('');
+  $('mealRows').innerHTML = html;
+}
+
+function openMealModal(key) {
+  const meal = S().meals[key];
+  $('mealModalTitle').textContent = MEAL_LABELS[key] + ' 기록';
+  $('mealKey').value = key;
+  $('mealContent').value = meal ? meal.content : '';
+  $('mealTime').value = meal ? (meal.time || nowTime()) : nowTime();
+  $('mealAmount').value = meal ? (meal.amount || '전부') : '전부';
+  $('mealNote').value = meal ? (meal.note || '') : '';
+  openModal('mealModal');
+}
+
+function saveMeal() {
+  const key = $('mealKey').value;
+  const content = $('mealContent').value.trim();
+  if (!content) { toast('식사 내용을 입력해주세요'); return; }
+  const s = S();
+  s.meals[key] = { content, time: $('mealTime').value, amount: $('mealAmount').value, note: $('mealNote').value };
+  s.mealDone[key] = true;
+  persist(); renderMeals(); closeModal('mealModal');
+  toast(`${MEAL_LABELS[key]} 기록 완료 ✓`);
+}
+
+function toggleMealDone(key) {
+  const s = S();
+  s.mealDone[key] = !s.mealDone[key];
+  persist(); renderMeals();
+}
+
+// ── Snacks ────────────────────────────────────────────────
+function renderSnacks() {
+  const s = S();
+  if (!s.snacks.length) {
+    $('snackList').innerHTML = '<span style="font-size:13px;color:var(--text-sub)">기록된 간식이 없어요</span>';
+    return;
+  }
+  $('snackList').innerHTML = s.snacks.map((sn, i) =>
+    `<span class="snack-tag">${sn.time ? sn.time + ' · ' : ''}${sn.content} <span class="snack-del" onclick="delSnack(${i})">×</span></span>`
+  ).join('');
+}
+
+function openSnackModal() {
+  $('snackContent').value = '';
+  $('snackTime').value = nowTime();
+  openModal('snackModal');
+}
+
+function saveSnack() {
+  const content = $('snackContent').value.trim();
+  if (!content) { toast('간식 내용을 입력해주세요'); return; }
+  const s = S();
+  s.snacks.push({ content, time: $('snackTime').value });
+  persist(); renderSnacks(); closeModal('snackModal');
+  toast('간식 기록 완료 ✓');
+}
+
+function delSnack(i) {
+  S().snacks.splice(i, 1);
+  persist(); renderSnacks();
+}
+
+// ── Water ─────────────────────────────────────────────────
+function renderWater() {
+  const s = S();
+  const row = $('glassRow');
+  row.innerHTML = '';
+  for (let i = 0; i < 8; i++) {
+    const btn = document.createElement('button');
+    btn.className = 'glass' + (i < s.water ? ' on' : '');
+    btn.textContent = '🥛';
+    btn.onclick = () => { s.water = (s.water === i + 1) ? i : i + 1; persist(); renderWater(); };
+    row.appendChild(btn);
+  }
+  $('waterLabel').textContent = `${s.water} / 8 잔`;
+}
+
+// ── Medications ───────────────────────────────────────────
+function renderMeds() {
+  const s = S();
+  const meds = s.meds || [];
+  if (!meds.length) {
+    $('medList').innerHTML = '<div style="text-align:center;color:var(--text-sub);font-size:13px;padding:20px 0">약을 추가해주세요</div>';
+  } else {
+    $('medList').innerHTML = meds.map((m, i) => `
+      <div class="med-row">
+        <div class="med-chk ${m.taken ? 'on' : ''}" onclick="toggleMed(${i})">✓</div>
+        <div class="med-info">
+          <div class="med-name ${m.taken ? 'taken' : ''}">${m.name}</div>
+          <div class="med-detail">${[m.dose, m.memo].filter(Boolean).join(' · ')}</div>
+        </div>
+        <span class="med-timing">${m.timing}</span>
+        <button class="med-del" onclick="delMed(${i})">×</button>
+      </div>`).join('');
+  }
+  const total = meds.length, taken = meds.filter(m => m.taken).length;
+  $('medProgTxt').textContent = `${taken} / ${total}`;
+  $('medProgBar').style.width = total ? `${(taken/total)*100}%` : '0%';
+  $('medPct').textContent = total ? `${Math.round((taken/total)*100)}%` : '-';
+}
+
+function toggleMed(i) {
+  const m = S().meds[i];
+  m.taken = !m.taken;
+  persist(); renderMeds();
+}
+
+function delMed(i) {
+  const s = S();
+  const id = s.meds[i].id;
+  s.meds.splice(i, 1);
+  // Remove from global list too
+  const gl = JSON.parse(localStorage.getItem('globalMeds') || '[]').filter(m => m.id !== id);
+  saveGlobalMeds(gl);
+  persist(); renderMeds();
+}
+
+function openMedModal() {
+  $('medName').value = ''; $('medTiming').value = '아침';
+  $('medDose').value = ''; $('medMemo').value = '';
+  openModal('medModal');
+}
+
+function saveMed() {
+  const name = $('medName').value.trim();
+  if (!name) { toast('약 이름을 입력해주세요'); return; }
+  const med = { id: Date.now(), name, timing: $('medTiming').value, dose: $('medDose').value.trim(), memo: $('medMemo').value.trim() };
+  // Add to global
+  const gl = JSON.parse(localStorage.getItem('globalMeds') || '[]');
+  gl.push({ id: med.id, name: med.name, timing: med.timing, dose: med.dose, memo: med.memo });
+  saveGlobalMeds(gl);
+  // Add to today
+  S().meds.push({ ...med, taken: false });
+  persist(); renderMeds(); closeModal('medModal');
+  toast('약이 추가되었어요 ✓');
+}
+
+// ── Temperature ───────────────────────────────────────────
+function renderTemp() {
+  const s = S();
+  const t = s.temp;
+  if (t.cur !== null && t.cur !== undefined) {
+    $('tempNum').textContent = t.cur.val.toFixed(1);
+    $('tempLastTime').textContent = '마지막 측정: ' + t.cur.time;
+    const badge = $('tempBadge');
+    badge.style.display = 'inline';
+    const v = t.cur.val;
+    if (v < 36.0) { badge.className = 'temp-badge tbadge-low'; badge.textContent = '저체온'; }
+    else if (v <= 37.4) { badge.className = 'temp-badge tbadge-normal'; badge.textContent = '정상'; }
+    else { badge.className = 'temp-badge tbadge-fever'; badge.textContent = '발열'; }
+  }
+  // History trend
+  const hist = t.hist || [];
+  $('tempTrend').innerHTML = hist.slice(-8).map(h => {
+    const v = h.val;
+    const col = v < 36 ? '#64b5f6' : v <= 37.4 ? 'var(--primary)' : 'var(--danger)';
+    return `<div class="trend-item"><div class="trend-val" style="color:${col}">${v.toFixed(1)}°</div><div class="trend-time">${h.time}</div></div>`;
+  }).join('');
+}
+
+function saveTemp() {
+  const v = parseFloat($('tempInp').value);
+  if (isNaN(v) || v < 34 || v > 42) { toast('올바른 체온을 입력해주세요 (34~42°C)'); return; }
+  const s = S();
+  const entry = { val: v, time: nowClock() };
+  s.temp.cur = entry;
+  s.temp.hist = [...(s.temp.hist || []), entry];
+  persist(); renderTemp(); $('tempInp').value = '';
+  toast(`체온 ${v.toFixed(1)}°C 기록 완료 ✓`);
+}
+
+// ── Blood Pressure ────────────────────────────────────────
+function renderBP() {
+  const bp = S().bp;
+  if (bp) {
+    $('bpDisplay').innerHTML = `${bp.sys} / ${bp.dia} <span style="font-size:13px;color:var(--text-sub)">mmHg</span>`;
+    $('bpTime').textContent = '마지막 측정: ' + bp.time;
+  }
+}
+
+function saveBP() {
+  const sys = parseInt($('bpSys').value), dia = parseInt($('bpDia').value);
+  if (isNaN(sys) || isNaN(dia) || sys < 60 || sys > 250 || dia < 40 || dia > 180) {
+    toast('혈압 수치를 올바르게 입력해주세요'); return;
+  }
+  S().bp = { sys, dia, time: nowClock() };
+  persist(); renderBP();
+  $('bpSys').value = ''; $('bpDia').value = '';
+  toast(`혈압 ${sys}/${dia} mmHg 기록 완료 ✓`);
+}
+
+// ── Weight ────────────────────────────────────────────────
+function renderWeightUI() {
+  const w = S().weight;
+  if (w) {
+    $('weightNum').textContent = w.val.toFixed(1);
+    $('weightTime').textContent = '마지막 측정: ' + w.time;
+  }
+}
+
+function saveWeight() {
+  const v = parseFloat($('weightInp').value);
+  if (isNaN(v) || v < 20 || v > 300) { toast('올바른 체중을 입력해주세요'); return; }
+  S().weight = { val: v, time: nowClock() };
+  persist(); renderWeightUI(); $('weightInp').value = '';
+  toast(`체중 ${v.toFixed(1)}kg 기록 완료 ✓`);
+}
+
+// ── Pain ──────────────────────────────────────────────────
+function renderPainScale() {
+  const s = S();
+  const cur = s.pain ? s.pain.level : null;
+  const el = $('painScale');
+  el.innerHTML = '';
+  for (let i = 0; i <= 10; i++) {
+    const btn = document.createElement('button');
+    btn.className = 'p-btn';
+    btn.textContent = i;
+    const sel = cur === i;
+    // Color by severity
+    let col, bg;
+    if (i <= 2)       { col = '#2e7d32'; bg = '#e8f5e9'; }
+    else if (i <= 4)  { col = '#f9a825'; bg = '#fffde7'; }
+    else if (i <= 6)  { col = '#e65100'; bg = '#fff3e0'; }
+    else              { col = '#c62828'; bg = '#ffebee'; }
+    btn.style.color = sel ? 'white' : col;
+    btn.style.background = sel ? col : 'white';
+    btn.style.borderColor = col;
+    btn.onclick = () => { S().pain.level = i; renderPainScale(); };
+    el.appendChild(btn);
+  }
+  // Restore chip selections
+  if (s.pain) {
+    restoreChips('painLocs', s.pain.locs);
+    restoreChips('painType', s.pain.type);
+  }
+}
+
+function restoreChips(containerId, values) {
+  if (!values) return;
+  document.querySelectorAll(`#${containerId} .chip`).forEach(c => {
+    c.classList.toggle('on', values.includes(c.textContent));
+  });
+}
+
+function getChipValues(containerId) {
+  return Array.from(document.querySelectorAll(`#${containerId} .chip.on`)).map(c => c.textContent);
+}
+
+function savePain() {
+  const s = S();
+  s.pain.locs = getChipValues('painLocs');
+  s.pain.type = getChipValues('painType');
+  persist(); toast('통증 기록이 저장되었어요 ✓');
+}
+
+// ── Bowel ─────────────────────────────────────────────────
+function selectBowel(val) {
+  $('bowelYes').classList.toggle('on', val === 'yes');
+  $('bowelNo').classList.toggle('on', val === 'no');
+  $('bowelDetail').style.display = val === 'yes' ? 'block' : 'none';
+  S().bowel.done = val === 'yes';
+}
+
+function saveBowel() {
+  const s = S();
+  s.bowel.count = $('bowelCnt').value;
+  s.bowel.form  = getChipValues('bowelDetail');
+  persist(); toast('배변 기록이 저장되었어요 ✓');
+}
+
+// ── Condition ─────────────────────────────────────────────
+function selectCond(btn, val) {
+  document.querySelectorAll('.cond-btn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  S().condition = val;
+  persist();
+}
+
+// ── Side effects ──────────────────────────────────────────
+function saveSideEffects() {
+  S().sideEffects = getChipValues('sideEffects');
+  persist(); toast('부작용/증상이 저장되었어요 ✓');
+}
+
+// ── Notes ─────────────────────────────────────────────────
+function saveNotes() {
+  S().notes = $('notesInp').value;
+  persist(); toast('메모가 저장되었어요 ✓');
+}
+
+// ── Summary ───────────────────────────────────────────────
+const COND_MAP = { 'very-good':'매우 좋음 😄','good':'좋음 🙂','normal':'보통 😐','bad':'나쁨 😔','very-bad':'매우 나쁨 😣' };
+
+function renderSummary() {
+  const s = S();
+  const mealCnt = MEAL_KEYS.filter(k => s.mealDone[k]).length;
+  const medTotal = (s.meds || []).length;
+  const medTaken = (s.meds || []).filter(m => m.taken).length;
+  const tempOk = s.temp && s.temp.cur !== null && s.temp.cur !== undefined;
+
+  function row(ico, bg, label, sub, badgeClass, badgeText) {
+    return `<div class="sum-card">
+      <div class="sum-left">
+        <div class="sum-ico" style="background:${bg}">${ico}</div>
+        <div>
+          <div class="sum-label">${label}</div>
+          <div class="sum-sub">${sub}</div>
+        </div>
+      </div>
+      <span class="badge ${badgeClass}">${badgeText}</span>
+    </div>`;
+  }
+
+  let html = '';
+
+  // Meal
+  const mealSub = MEAL_KEYS.map(k => `${MEAL_LABELS[k]} ${s.mealDone[k] ? '✓' : '—'}`).join(' · ') +
+    ` · 간식 ${s.snacks.length}개 · 물 ${s.water}잔`;
+  html += row('🍽️','#fff3e0','식사', mealSub,
+    mealCnt === 3 ? 'bg-green' : mealCnt > 0 ? 'bg-orange' : 'bg-gray',
+    mealCnt === 3 ? '완료' : `${mealCnt}/3`);
+
+  // Meds
+  html += row('💊','#e8f5e9','약 복용', `${medTaken}/${medTotal} 복용 완료`,
+    medTotal === 0 ? 'bg-gray' : medTaken === medTotal ? 'bg-green' : 'bg-orange',
+    medTotal === 0 ? '-' : `${medTaken}/${medTotal}`);
+
+  // Temp
+  const tempVal = tempOk ? s.temp.cur.val : null;
+  html += row('🌡️','#e3f2fd','체온', tempOk ? `${tempVal.toFixed(1)}°C · ${s.temp.cur.time}` : '미기록',
+    !tempOk ? 'bg-gray' : tempVal > 37.4 ? 'bg-red' : 'bg-green',
+    !tempOk ? '미측정' : tempVal > 37.4 ? '발열' : '정상');
+
+  // BP
+  const bp = s.bp;
+  html += row('❤️','#fce4ec','혈압', bp ? `${bp.sys}/${bp.dia} mmHg · ${bp.time}` : '미기록',
+    bp ? (bp.sys > 140 || bp.dia > 90 ? 'bg-orange' : 'bg-green') : 'bg-gray',
+    bp ? `${bp.sys}/${bp.dia}` : '미측정');
+
+  // Weight
+  const w = s.weight;
+  html += row('⚖️','#f3e5f5','체중', w ? `${w.val.toFixed(1)}kg · ${w.time}` : '미기록',
+    w ? 'bg-green' : 'bg-gray', w ? `${w.val.toFixed(1)}kg` : '미측정');
+
+  // Pain
+  const pl = s.pain ? s.pain.level : null;
+  const painLocs = s.pain && s.pain.locs ? s.pain.locs.join(', ') : '';
+  html += row('🩹','#fff8e1','통증',
+    pl !== null ? `강도 ${pl}/10${painLocs ? ' · ' + painLocs : ''}` : '미기록',
+    pl === null ? 'bg-gray' : pl === 0 ? 'bg-green' : pl <= 4 ? 'bg-orange' : 'bg-red',
+    pl === null ? '미기록' : `${pl}/10`);
+
+  // Bowel
+  const bw = s.bowel;
+  html += row('🚽','#e8eaf6','배변',
+    bw.done === null ? '미기록' : bw.done ? `완료${bw.count ? ' · ' + bw.count + '회' : ''}` : '오늘 못함',
+    bw.done === null ? 'bg-gray' : bw.done ? 'bg-green' : 'bg-orange',
+    bw.done === null ? '미기록' : bw.done ? '완료' : '미완');
+
+  // Condition
+  html += row('😊','#e8f5e9','컨디션',
+    s.condition ? COND_MAP[s.condition] : '미기록',
+    !s.condition ? 'bg-gray' : ['very-good','good'].includes(s.condition) ? 'bg-green' : ['bad','very-bad'].includes(s.condition) ? 'bg-red' : 'bg-orange',
+    s.condition ? COND_MAP[s.condition].split(' ')[0] : '미기록');
+
+  // Side effects
+  if (s.sideEffects && s.sideEffects.length) {
+    html += row('⚠️','#fff3e0','부작용/증상', s.sideEffects.join(' · '),
+      'bg-orange', `${s.sideEffects.length}개`);
+  }
+
+  // Notes
+  if (s.notes) {
+    html += `<div class="card" style="margin-bottom:8px">
+      <div class="card-title" style="margin-bottom:10px">📝 특이사항</div>
+      <div style="font-size:14px;line-height:1.7;color:var(--text)">${s.notes.replace(/\n/g,'<br>')}</div>
+    </div>`;
+  }
+
+  $('summaryContent').innerHTML = html || '<div style="text-align:center;color:var(--text-sub);padding:40px 0">아직 기록된 내용이 없어요</div>';
+}
+
+// ── Full render ───────────────────────────────────────────
+function renderAll() {
+  renderMeals();
+  renderSnacks();
+  renderWater();
+  renderMeds();
+  renderTemp();
+  renderBP();
+  renderWeightUI();
+  renderPainScale();
+  // Restore bowel state
+  const bw = S().bowel;
+  if (bw.done !== null) selectBowel(bw.done ? 'yes' : 'no');
+  else { $('bowelYes').classList.remove('on'); $('bowelNo').classList.remove('on'); $('bowelDetail').style.display='none'; }
+  // Restore condition
+  if (S().condition) {
+    document.querySelectorAll('.cond-btn').forEach(b => b.classList.remove('on'));
+    const val = S().condition;
+    document.querySelectorAll('.cond-btn').forEach(b => {
+      if (b.onclick.toString().includes(`'${val}'`)) b.classList.add('on');
+    });
+  }
+  // Restore side effects
+  restoreChips('sideEffects', S().sideEffects);
+  // Restore notes
+  $('notesInp').value = S().notes || '';
+}
+
+// ── Init ──────────────────────────────────────────────────
+load();
+renderCal();
+renderAll();
+</script>
+</body>
+</html>
