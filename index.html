@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>건강 일지</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <style>
     :root {
       --primary: #5cb88a;
@@ -191,7 +193,7 @@
 
 <div class="app-header">
   <div class="header-top">
-    <div class="app-title">💚 건강 일지</div>
+    <div class="app-title" onclick="openShowCode()" style="cursor:pointer;">💚 건강 일지 <span id="codeChip" style="font-size:11px;font-weight:600;background:var(--primary-light);color:var(--primary);padding:2px 8px;border-radius:10px;vertical-align:middle;"></span></div>
     <div class="date-nav">
       <button onclick="shiftDay(-1)">‹</button>
       <div class="cur-date" id="curDate">—</div>
@@ -362,6 +364,47 @@
   </div>
 </div>
 
+<!-- Modal: 환자 코드 설정 -->
+<div class="modal" id="codeModal" style="display:none;align-items:center;justify-content:center;">
+  <div class="modal-content" style="border-radius:20px;max-width:340px;margin:16px;">
+    <div style="text-align:center;margin-bottom:16px;">
+      <div style="font-size:36px;margin-bottom:8px;">💚</div>
+      <div style="font-size:18px;font-weight:700;margin-bottom:4px;">건강 일지</div>
+      <div style="font-size:13px;color:var(--text-sub);">데이터를 여러 기기에서 공유할 수 있어요</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">공유 코드 입력</label>
+      <input type="text" class="form-input" id="codeInput" placeholder="보호자에게 받은 6자리 코드" maxlength="6" style="text-align:center;font-size:22px;font-weight:700;letter-spacing:4px;text-transform:uppercase;" />
+    </div>
+    <button class="btn-save" style="width:100%;padding:12px;margin-bottom:10px;" onclick="connectCode()">이 코드로 연결</button>
+    <div style="text-align:center;color:var(--text-sub);font-size:12px;margin-bottom:10px;">— 또는 —</div>
+    <button class="btn-outline" style="width:100%;padding:12px;" onclick="generateCode()">새 코드 생성 (처음 사용)</button>
+  </div>
+</div>
+
+<!-- Modal: 코드 확인/공유 -->
+<div class="modal" id="showCodeModal">
+  <div class="modal-content">
+    <div class="modal-handle"></div>
+    <div class="modal-title">📤 공유 코드</div>
+    <div style="text-align:center;padding:16px 0;">
+      <div style="font-size:11px;color:var(--text-sub);margin-bottom:8px;">이 코드를 보호자와 공유하세요</div>
+      <div id="displayCode" style="font-size:36px;font-weight:900;letter-spacing:8px;color:var(--primary-dark);background:var(--primary-light);border-radius:12px;padding:16px;margin-bottom:8px;"></div>
+      <div style="font-size:11px;color:var(--text-sub);">코드를 입력하면 같은 데이터를 볼 수 있어요</div>
+    </div>
+    <div class="form-group" style="margin-top:8px;">
+      <label class="form-label">다른 코드로 전환</label>
+      <div style="display:flex;gap:8px;">
+        <input type="text" class="form-input" id="switchCodeInput" placeholder="다른 코드 입력" maxlength="6" style="text-align:center;font-weight:700;letter-spacing:3px;text-transform:uppercase;" />
+        <button class="btn-primary" onclick="switchCode()">전환</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="$('showCodeModal').classList.remove('open')">닫기</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: 간식 추가 -->
 <div class="modal" id="snackModal">
   <div class="modal-content">
@@ -495,6 +538,18 @@
 <script>
 const $ = id => document.getElementById(id);
 
+// Firebase init
+const firebaseConfig = {
+  apiKey: "AIzaSyB24RHDOmxk8qDmmV6DaLtPoTwRSXrDpVM",
+  authDomain: "forpsk-ef375.firebaseapp.com",
+  projectId: "forpsk-ef375",
+  storageBucket: "forpsk-ef375.firebasestorage.app",
+  messagingSenderId: "789277753031",
+  appId: "1:789277753031:web:7efb8b9d7f7f2ce1d948e2"
+};
+firebase.initializeApp(firebaseConfig);
+const firestore = firebase.firestore();
+
 let db = {};
 let globalMeds = [];
 let selectedDate = todayStr();
@@ -502,17 +557,106 @@ let activeTab = 'meal';
 let calYear = new Date().getFullYear();
 let calMonth = new Date().getMonth();
 let editingMeal = null;
+let patientCode = null;
+let fsUnsubscribe = null;
+let persistTimer = null;
 
 const MEAL_KEYS = ['breakfast', 'lunch', 'dinner'];
 const MEAL_NAMES = { breakfast: '아침', lunch: '점심', dinner: '저녁' };
 const MEAL_EMOJI = { breakfast: '🌅', lunch: '☀️', dinner: '🌙' };
 
-function persist() { localStorage.setItem('hj_health_db', JSON.stringify(db)); }
+function persist() {
+  localStorage.setItem('hj_health_db', JSON.stringify(db));
+  if (!patientCode) return;
+  clearTimeout(persistTimer);
+  persistTimer = setTimeout(() => {
+    firestore.doc('patients/' + patientCode).set({ db, globalMeds }, { merge: true })
+      .catch(e => console.error('Firestore 저장 실패:', e));
+  }, 600);
+}
+
 function load() {
   try { db = JSON.parse(localStorage.getItem('hj_health_db') || '{}'); } catch(e) { db = {}; }
   try { globalMeds = JSON.parse(localStorage.getItem('globalMeds') || '[]'); } catch(e) { globalMeds = []; }
+  patientCode = localStorage.getItem('patientCode');
+  if (patientCode) {
+    $('codeModal').style.display = 'none';
+    setupFsListener();
+    updateCodeChip();
+  } else {
+    $('codeModal').style.display = 'flex';
+  }
 }
-function saveMeds() { localStorage.setItem('globalMeds', JSON.stringify(globalMeds)); }
+
+function saveMeds() {
+  localStorage.setItem('globalMeds', JSON.stringify(globalMeds));
+  persist();
+}
+
+function setupFsListener() {
+  if (fsUnsubscribe) fsUnsubscribe();
+  fsUnsubscribe = firestore.doc('patients/' + patientCode).onSnapshot(
+    { includeMetadataChanges: true },
+    snap => {
+      if (snap.metadata.hasPendingWrites) return;
+      if (!snap.exists) return;
+      const data = snap.data();
+      if (data.db) { db = data.db; localStorage.setItem('hj_health_db', JSON.stringify(db)); }
+      if (data.globalMeds) { globalMeds = data.globalMeds; localStorage.setItem('globalMeds', JSON.stringify(globalMeds)); }
+      renderAll();
+    },
+    err => console.error('Firestore 리슨 실패:', err)
+  );
+}
+
+function updateCodeChip() {
+  const chip = $('codeChip');
+  if (chip && patientCode) chip.textContent = patientCode;
+}
+
+function generateCode() {
+  const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+  applyCode(code);
+}
+
+function connectCode() {
+  const code = $('codeInput').value.trim().toUpperCase();
+  if (code.length < 4) { alert('올바른 코드를 입력하세요.'); return; }
+  applyCode(code);
+}
+
+function applyCode(code) {
+  patientCode = code;
+  localStorage.setItem('patientCode', code);
+  $('codeModal').style.display = 'none';
+  updateCodeChip();
+  // load existing data from Firestore
+  firestore.doc('patients/' + code).get().then(snap => {
+    if (snap.exists) {
+      const data = snap.data();
+      if (data.db) { db = data.db; localStorage.setItem('hj_health_db', JSON.stringify(db)); }
+      if (data.globalMeds) { globalMeds = data.globalMeds; localStorage.setItem('globalMeds', JSON.stringify(globalMeds)); }
+    }
+    setupFsListener();
+    renderAll();
+    showToast('코드 [' + code + '] 연결됨');
+  }).catch(e => { console.error(e); setupFsListener(); renderAll(); });
+}
+
+function openShowCode() {
+  if (!patientCode) { $('codeModal').style.display = 'flex'; return; }
+  $('displayCode').textContent = patientCode;
+  $('switchCodeInput').value = '';
+  $('showCodeModal').classList.add('open');
+}
+
+function switchCode() {
+  const code = $('switchCodeInput').value.trim().toUpperCase();
+  if (code.length < 4) { alert('올바른 코드를 입력하세요.'); return; }
+  if (!confirm('코드를 [' + code + ']로 전환하면 현재 기기의 데이터가 해당 코드의 데이터로 교체됩니다. 계속하시겠어요?')) return;
+  $('showCodeModal').classList.remove('open');
+  applyCode(code);
+}
 
 function ds() {
   if (!db[selectedDate]) db[selectedDate] = newDay();
