@@ -59,7 +59,7 @@
 
     .meal-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
     .meal-row:last-child { border-bottom: none; }
-    .meal-label { font-size: 13px; font-weight: 600; width: 44px; }
+    .meal-label { font-size: 13px; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
     .meal-info { flex: 1; font-size: 12px; color: var(--text-sub); }
     .meal-info.filled { color: var(--text); }
     .meal-time { font-size: 11px; color: var(--text-sub); }
@@ -215,9 +215,9 @@
     <div id="mealRows"></div>
   </div>
   <div class="card">
-    <div class="card-title">🍪 간식</div>
+    <div class="card-title">🫐 간식</div>
     <div class="snack-tags" id="snackTags"></div>
-    <button class="btn-sm" onclick="addSnack()">+ 간식 추가</button>
+    <button class="btn-sm" onclick="openSnackModal()">+ 간식 추가</button>
   </div>
   <div class="card">
     <div class="card-title">💧 수분 섭취</div>
@@ -359,6 +359,33 @@
   <div class="card">
     <div class="card-title" id="summaryDateTitle">오늘 요약</div>
     <div class="summary-grid" id="summaryGrid"></div>
+  </div>
+</div>
+
+<!-- Modal: 간식 추가 -->
+<div class="modal" id="snackModal">
+  <div class="modal-content">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🫐 간식 추가</div>
+    <div class="form-group">
+      <label class="form-label">간식 선택</label>
+      <div class="chip-group" id="snackPresets">
+        <div class="chip" data-val="영진약품 하모닐란" onclick="selectSnackPreset(this)">영진약품 하모닐란<br><small style="opacity:0.7;">약 200kcal</small></div>
+        <div class="chip" data-val="뉴케어 캔서플랜" onclick="selectSnackPreset(this)">뉴케어 캔서플랜<br><small style="opacity:0.7;">약 200kcal</small></div>
+        <div class="chip" data-val="custom" onclick="selectSnackPreset(this)">직접 입력</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <input type="text" class="form-input" id="snackCustomName" placeholder="간식 이름 직접 입력..." style="display:none;" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">섭취 시간</label>
+      <input type="time" class="form-input" id="snackTime" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeSnackModal()">취소</button>
+      <button class="btn-save" onclick="saveSnack()">추가</button>
+    </div>
   </div>
 </div>
 
@@ -612,9 +639,15 @@ function renderMealTab() {
   const snackTags = $('snackTags');
   snackTags.innerHTML = '';
   (state.snacks || []).forEach((s, i) => {
+    const name = typeof s === 'string' ? s : s.name;
+    const time = typeof s === 'object' && s.time ? s.time : '';
+    const kcal = typeof s === 'object' && s.kcal ? s.kcal : '';
     const tag = document.createElement('div');
     tag.className = 'snack-tag';
-    tag.innerHTML = `${s} <span class="del" onclick="removeSnack(${i})">×</span>`;
+    let detail = '';
+    if (time) detail += ' ' + time;
+    if (kcal) detail += ' · ' + kcal + 'kcal';
+    tag.innerHTML = `${name}${detail ? '<span style="opacity:0.7;font-size:10px;">' + detail + '</span>' : ''} <span class="del" onclick="removeSnack(${i})">×</span>`;
     snackTags.appendChild(tag);
   });
 
@@ -640,13 +673,43 @@ function toggleBottle(i) {
   state.water = i < state.water ? i : i + 1;
   persist(); renderMealTab();
 }
-function addSnack() {
-  const name = prompt('간식 내용:');
-  if (!name || !name.trim()) return;
+const PRESET_SNACKS = [
+  { name: '영진약품 하모닐란', kcal: 200 },
+  { name: '뉴케어 캔서플랜', kcal: 200 }
+];
+
+function openSnackModal() {
+  $('snackCustomName').value = '';
+  $('snackCustomName').style.display = 'none';
+  $('snackTime').value = '';
+  document.querySelectorAll('#snackPresets .chip').forEach(c => c.classList.remove('selected'));
+  const customChip = document.querySelector('#snackPresets .chip[data-val="custom"]');
+  if (customChip) customChip.classList.remove('selected');
+  $('snackModal').classList.add('open');
+}
+function closeSnackModal() { $('snackModal').classList.remove('open'); }
+function selectSnackPreset(el) {
+  document.querySelectorAll('#snackPresets .chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  $('snackCustomName').style.display = el.dataset.val === 'custom' ? 'block' : 'none';
+}
+function saveSnack() {
+  const selChip = document.querySelector('#snackPresets .chip.selected');
+  let name = '', kcal = null;
+  if (!selChip) { alert('간식을 선택하거나 직접 입력하세요.'); return; }
+  if (selChip.dataset.val === 'custom') {
+    name = $('snackCustomName').value.trim();
+    if (!name) { alert('간식 이름을 입력하세요.'); return; }
+  } else {
+    const preset = PRESET_SNACKS.find(p => p.name === selChip.dataset.val);
+    name = selChip.dataset.val;
+    kcal = preset ? preset.kcal : null;
+  }
+  const time = $('snackTime').value;
   const state = ds();
   if (!state.snacks) state.snacks = [];
-  state.snacks.push(name.trim());
-  persist(); renderMealTab();
+  state.snacks.push({ name, time, kcal });
+  persist(); closeSnackModal(); renderMealTab();
 }
 function removeSnack(i) {
   const state = ds();
@@ -1265,6 +1328,7 @@ function showToast(msg) {
   t._timeout = setTimeout(() => { t.style.opacity = '0'; }, 1800);
 }
 
+$('snackModal').addEventListener('click', function(e) { if (e.target === this) closeSnackModal(); });
 $('mealModal').addEventListener('click', function(e) { if (e.target === this) closeMealModal(); });
 $('addDrugModal').addEventListener('click', function(e) { if (e.target === this) closeAddDrug(); });
 $('drugRegistryModal').addEventListener('click', function(e) { if (e.target === this) closeDrugRegistry(); });
